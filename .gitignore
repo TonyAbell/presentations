@@ -159,8 +159,13 @@ $RECYCLE.BIN/
 # Presentation
 # =========================
 demos/fslab/packages/
+demos/fslab/.paket/
 demos/scaffold/packages/
+demos/scaffold/.paket/
 demos/deedle/packages/
+demos/deedle/.paket/
 demos/r_type_provider/packages/
+demos/r_type_provider/.paket/
 slides/packages/
+slides/.paket/
 slides/output/
