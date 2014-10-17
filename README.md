@@ -2,17 +2,13 @@
 This is where I store all my talk material.
 ## Scaffold New Talk
 - Slides generated using [FsReveal](https://github.com/kimsk/FsReveal)
-- Copy the scaffold directory and rename as needed
-- run ./paket/paket.exe install
-   - will install packages
-- Fix Bug in FsReveal Package
-    - Edit packages\FsReveal\fsreveal\fsreveal.fsx
-    - Remove Version Info from 
-        - #I @"..\..\FSharp.Formatting\lib\net40\"
-        - #I @"..\..\FSharp.Compiler.Service\lib\net40\"
-- Edit ./slides/slides.md as needed
-- 'Build.cmd' to gen slides to 'output'
-    - Use 'Build.cmd KeepRunning' to live edit slides
+- 'init.cmd' to downlaod and install dependencies
+- 'build.cmd' to gen slides to 'output' folder
+    - Use 'build.cmd KeepRunning' to live edit slides
+
+## Run An Existing Demo
+- 'init.cmd' to downlaod and install dependencies
+- Open solution
 
 ## Scaffold New Demo
 - With [Paket](https://github.com/fsprojects/Paket)

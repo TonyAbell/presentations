@@ -19,4 +19,4 @@ if errorlevel 1 (
 if errorlevel 1 (
   exit /b %errorlevel%
 )
-
+copy fsreveal.fsx packages\FsReveal\fsreveal

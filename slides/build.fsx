@@ -1,12 +1,13 @@
 #r @"packages/FAKE/tools/FakeLib.dll"
 
-#load @"fsreveal.fsx"
+#load @"packages\FsReveal\fsreveal\fsreveal.fsx"
 
 open FsReveal
 open Fake
 open System.IO
 
 let outDir = "output"
+let inputDir = "content"
 
 Target "Clean" (fun _ ->
     CleanDirs [outDir]
@@ -27,14 +28,13 @@ let generateFor (file:FileInfo) =
     tryGenerate 3
 
 Target "GenerateSlides" (fun _ ->
-    !! "slides/*.md"
-      ++ "slides/*.fsx"
+    !! "content/*.md"
     |> Seq.map fileInfo
     |> Seq.iter generateFor
 )
 
 Target "KeepRunning" (fun _ ->
-    use watcher = new FileSystemWatcher(DirectoryInfo("slides").FullName,"*.*")
+    use watcher = new FileSystemWatcher(DirectoryInfo(inputDir).FullName,"*.*")
     watcher.EnableRaisingEvents <- true
     watcher.Changed.Add(fun e -> fileInfo e.FullPath |> generateFor)
     watcher.Created.Add(fun e -> fileInfo e.FullPath |> generateFor)
