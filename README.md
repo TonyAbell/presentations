@@ -18,3 +18,4 @@ This is where I store all my talk material.
    - paket.references
 - Create demo solution
 - Run ./paket/paket.exe install --hard
+- Update .gitignore
