@@ -154,3 +154,14 @@ $RECYCLE.BIN/
 
 # Mac desktop service store files
 .DS_Store
+
+# =========================
+# Presentation
+# =========================
+demos/fslab/packages/
+demos/scaffold/packages/
+demos/deedle/packages/
+demos/r_type_provider/packages/
+slides/packages/
+
+
