@@ -120,7 +120,8 @@ let getFsharxCommits =
 
 let months = [ for d in 1 .. 50 -> System.DateTime.Today.AddMonths(-d) ] 
                |> List.sort
-
+let weeks = [ for d in 1.0 .. 200.0 -> System.DateTime.Today.AddDays(-d * 7.0) ] 
+               |> List.sort
 let days = [ for d in 1.0 .. 365.0 -> System.DateTime.Today.AddDays(-d) ] 
                |> List.sort
 
@@ -144,15 +145,40 @@ let genKeyValue (dic:System.Collections.Generic.Dictionary<System.DateTime,int>)
 //    |> Series.resampleInto months Direction.Forward (fun k s -> if s.IsEmpty then 0 else s |> Series.reduceValues (+) )
 //    |> Chart.Line
 
+let commitsToUserSeries (commits:JsonProvider<commitsUrl>.Root[]) =
+        commits
+        |> Array.Parallel.map (fun f -> f.Commit.Author.Name,f.Commit.Author.Date )       
+        |> Array.sortBy fst
+        |> Seq.groupBy fst
+        |> Seq.toArray
+        |> Array.Parallel.map(fun (k,v) -> k,v |> Seq.map(snd) |> Seq.toArray)
+        |> Array.Parallel.map(fun (n,v) -> n,v |> Array.map(fun f -> f,1))
+        |> Array.Parallel.map(fun (n,v) -> n,v |> Seq.fold genKeyValue (new System.Collections.Generic.Dictionary<System.DateTime,int>()) )
+        |> Array.Parallel.map(fun (n,v) -> n,v |> Seq.map(fun f-> f.Key,f.Value) )
+        |> Array.Parallel.map(fun (n,v) -> n,v |> Series.ofObservations) 
+        |> Array.Parallel.map(fun (n,v) -> n,v |> Series.sortByKey) 
+        
+
+
+let fsharxUserCommits = commitsToUserSeries getFsharxCommits
+
+
+
 let commitsToSeries (commits:JsonProvider<commitsUrl>.Root[]) =
         commits
-        |> Seq.map (fun f -> f.Commit.Committer.Date, 1)                         
+        |> Array.Parallel.map (fun f -> f.Commit.Committer.Date, 1)                         
         |> Seq.fold genKeyValue (new System.Collections.Generic.Dictionary<System.DateTime,int>())  
         |> Seq.map(fun f-> f.Key,f.Value)
         |> Series.ofObservations     
         |> Series.sortByKey 
 let sampleByMonth series =
     series |> Series.resampleInto months Direction.Forward (fun k s -> if s.IsEmpty then 0 else s |> Series.reduceValues (+) )
+let sampleByWeek series =
+    series |> Series.resampleInto weeks Direction.Forward (fun k s -> if s.IsEmpty then 0 else s |> Series.reduceValues (+) )
+
+
+
+
 
 let temp = 
     [ "Fsharx" => sampleByMonth (commitsToSeries getFsharxCommits);
@@ -163,13 +189,48 @@ let fsProjectsCommits = gitRepos.GetSamples()
                             |> Array.map (fun f -> f.Name,f.CommitsUrl)
                             |> Array.map (fun (n,u) -> n,u.Substring(0,u.IndexOf('{')))                            
                             |> Array.map (fun (n,url) -> n, getAllCommits url)
-                            
+
+
+let fsProjectsCommitsByUser = 
+                        gitRepos.GetSamples()
+                            |> Array.map (fun f -> f.CommitsUrl)
+                            |> Array.map (fun f -> f.Substring(0,f.IndexOf('{')))                            
+                            |> Array.map (fun f ->  getAllCommits f)                            
 
 fsProjectsCommits |> Seq.map(fun (n,c) -> n, sampleByMonth (commitsToSeries c) )
 
-fsProjectsCommits |> Array.map(fun (n,c) -> n,sampleByMonth (commitsToSeries c))
+fsProjectsCommits |> Array.map(fun (n,c) -> n,sampleByWeek (commitsToSeries c))
                   |> Array.map(fun (n,s) -> Chart.Line(s,Name=n))
                   |> Chart.Combine
+
+
+fsharxUserCommits
+    |> Array.map(fun (n,s) -> n,s |> sampleByWeek )
+    |> Array.map(fun (n,s) -> Chart.Line(s,Name=n))
+    |> Chart.Combine
+
+let fsProjUserCommits = 
+        fsProjectsCommits 
+            |> Array.Parallel.map(snd)    
+            |> Array.concat
+            |> commitsToUserSeries
+            |> Array.map(fun (n,s) -> n,s |> sampleByWeek )
+            |> Array.map(fun (n,s) -> Chart.Line(s,Name=n))
+            |> Chart.Combine
+
+let fsProjUserCommitsAvg = 
+        fsProjectsCommits 
+            |> Array.Parallel.map(snd)    
+            |> Array.concat
+            |> commitsToUserSeries
+            |> Array.map(fun (n,s) -> n,s  |> Series.reduceValues(+)   )
+            |> Array.sortBy(snd)
+            |> Array.rev |> Seq.take 7 |> Seq.toArray
+            |> Chart.Bar
+
+//
+//            |> Array.map(fun (n,s) -> Chart.Line(s,Name=n))
+//            |> Chart.Combine
 
 Chart.Combine
   [ Chart.Line(temp?Fsharx |> Series.observations,Name="Fsharx") 
@@ -208,23 +269,23 @@ let getProjectFSharpByteCount (url : string) =
     try 
         float (gitHubLangs.Load(url).F)
     with _ -> 0.0
-
-let reposAndSize = 
-    fsprojectsRepos.GetSamples()
-    |> Seq.toArray
-    |> Array.Parallel.map (fun f -> f, getProjectFSharpByteCount f.LanguagesUrl)
-
-let sizeSeries = 
-    reposAndSize
-    |> Seq.map (fun (f, s) -> f.Name, (float) s)
-    |> Series.ofObservations
-
-sizeSeries
-|> Series.sort
-//|> Series.rev
-|> Series.skipLast 1
-|> Series.takeLast 10
-|> Chart.Bar
+//
+//let reposAndSize = 
+//    fsprojectsRepos.GetSamples()
+//    |> Seq.toArray
+//    |> Array.Parallel.map (fun f -> f, getProjectFSharpByteCount f.LanguagesUrl)
+//
+//let sizeSeries = 
+//    reposAndSize
+//    |> Seq.map (fun (f, s) -> f.Name, (float) s)
+//    |> Series.ofObservations
+//
+//sizeSeries
+//|> Series.sort
+////|> Series.rev
+//|> Series.skipLast 1
+//|> Series.takeLast 10
+//|> Chart.Bar
 
 open System
 open RDotNet
